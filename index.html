@@ -14,32 +14,27 @@
         font-family: 'Poppins', sans-serif;
       }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "recharts": "https://esm.sh/recharts@2.12.7",
-    "lucide-react": "https://esm.sh/lucide-react@0.378.0",
-    "react": "https://esm.sh/react@18.2.0"
-  }
-}
-</script>
+    <!-- Load UMD library builds -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@0.378.0/dist/umd/lucide-react.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-200">
     <div id="root"></div>
-    <script type="module">
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import ReactDOM from 'react-dom/client';
-import * as LucideReact from 'lucide-react';
-import * as Recharts from 'recharts';
-
+    <script>
+// Libraries are now available on the window object (e.g., window.React)
+const { useState, useEffect, useMemo, useCallback } = React;
+const { createRoot } = ReactDOM;
 const { 
   Calendar, Plus, Wallet, LayoutGrid, List, MoreVertical, ChevronLeft, 
   ChevronRight, X, Trash2, Edit, Carrot, Fuel, UtensilsCrossed, Plane, 
   ShoppingBag, Receipt, Sparkles, Home, Save 
 } = LucideReact;
 
-const Icons = { ...LucideReact };
+const Icons = LucideReact;
+
+const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts;
 
 // --- Hook from hooks/useLocalStorage.ts ---
 function useLocalStorage(key, initialValue) {
@@ -183,7 +178,10 @@ const CalendarView = ({ expenses }) => {
         React.createElement('div', { key: day, className: `p-1 text-center rounded-lg ${isToday ? 'bg-violet-900/50' : ''} h-24 flex flex-col justify-start` },
           React.createElement('span', { className: `text-sm ${isToday ? 'font-bold text-violet-400' : 'text-slate-300'}` }, day),
           dailyTotal > 0 && (
-            React.createElement('div', { className: "text-xs bg-pink-500/20 text-pink-300 font-semibold rounded-md mt-1 px-1 py-0.5 truncate" },
+            React.createElement('div', { 
+              className: "bg-pink-500/20 text-pink-300 font-semibold rounded-md mt-1 px-1 py-0.5",
+              style: { fontSize: '11px', lineHeight: '1.2' }
+            },
               compactFormatter.format(dailyTotal)
             )
           )
@@ -391,7 +389,6 @@ const BudgetView = ({ budget, setBudget, categories, onAddCategory, onDeleteCate
 };
 
 // --- Component from components/DashboardView.tsx ---
-const { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } = Recharts;
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
 
 const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
@@ -421,18 +418,18 @@ const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
     return categories.filter(c => c.budget && c.budget > 0);
   }, [categories]);
 
-  const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 });
+  const currencyFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 });
 
   return (
     React.createElement('div', { className: "space-y-6" },
       React.createElement('div', { className: "grid grid-cols-2 gap-4" },
         React.createElement('div', { className: "bg-slate-800 p-4 rounded-2xl shadow-lg text-center" },
             React.createElement('h3', { className: "text-sm font-medium text-slate-400" }, "Total Spent"),
-            React.createElement('p', { className: "text-3xl font-bold text-red-400" }, formatter.format(totalSpent))
+            React.createElement('p', { className: "text-3xl font-bold text-red-400" }, currencyFormatter.format(totalSpent))
         ),
         React.createElement('div', { className: "bg-slate-800 p-4 rounded-2xl shadow-lg text-center" },
             React.createElement('h3', { className: "text-sm font-medium text-slate-400" }, "Budget Left"),
-            React.createElement('p', { className: "text-3xl font-bold text-green-400" }, formatter.format(budget - totalSpent))
+            React.createElement('p', { className: "text-3xl font-bold text-green-400" }, currencyFormatter.format(budget - totalSpent))
         )
       ),
       
@@ -461,7 +458,7 @@ const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
                         React.createElement('span', { className: "font-semibold text-slate-200" }, category.name)
                     ),
                     React.createElement('span', { className: `font-medium text-sm ${isOverBudget ? 'text-red-400' : 'text-slate-300'}` },
-                      isOverBudget ? `Over by ${formatter.format(Math.abs(remaining))}` : `${formatter.format(remaining)} left`
+                      isOverBudget ? `Over by ${currencyFormatter.format(Math.abs(remaining))}` : `${currencyFormatter.format(remaining)} left`
                     )
                   ),
                    React.createElement('div', { className: "w-full bg-slate-700 rounded-full h-2" },
@@ -471,7 +468,7 @@ const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
                       })
                   ),
                   React.createElement('div', { className: "text-right text-xs text-slate-400 mt-1" },
-                    `${formatter.format(spent)} / ${formatter.format(category.budget)}`
+                    `${currencyFormatter.format(spent)} / ${currencyFormatter.format(category.budget)}`
                   )
                 )
               );
@@ -494,7 +491,7 @@ const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
                   ))
                 ),
                 React.createElement(Tooltip, { 
-                  formatter: (value) => formatter.format(value),
+                  formatter: (value) => currencyFormatter.format(value),
                   contentStyle: { 
                     backgroundColor: 'rgba(30, 41, 59, 0.9)', 
                     border: '1px solid #475569', 
@@ -698,13 +695,13 @@ function App() {
   );
 }
 
-// --- Entry point from index.tsx ---
+// --- Entry point ---
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-const root = ReactDOM.createRoot(rootElement);
+const root = createRoot(rootElement);
 root.render(
   React.createElement(React.StrictMode, null, React.createElement(App))
 );
