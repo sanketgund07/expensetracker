@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Expense Tracker</title>
+    <meta name="theme-color" content="#0f172a">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.552.0",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-900 text-slate-200">
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState, useMemo, useCallback, useEffect } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+      import {
+          Calendar, Plus, Wallet, LayoutGrid, List, MoreVertical, ChevronLeft, ChevronRight, X, Trash2, Edit, Carrot, Fuel,
+          UtensilsCrossed, Plane, ShoppingBag, Receipt, Sparkles, Home, Save
+      } from 'lucide-react';
+
+      // --- START: Consolidated App Code ---
+
+      // Hook: useLocalStorage
+      function useLocalStorage(key, initialValue) {
+        const [storedValue, setStoredValue] = useState(() => {
+          try {
+            const item = window.localStorage.getItem(key);
+            return item ? JSON.parse(item) : initialValue;
+          } catch (error) {
+            console.error(error);
+            return initialValue;
+          }
+        });
+
+        useEffect(() => {
+          try {
+            const valueToStore = typeof storedValue === 'function' ? storedValue(storedValue) : storedValue;
+            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          } catch (error) {
+            console.error(error);
+          }
+        }, [key, storedValue]);
+
+        return [storedValue, setStoredValue];
+      }
+
+      // Icon Handling
+      const Icons = {
+          Calendar, Plus, Wallet, LayoutGrid, List, MoreVertical, ChevronLeft, ChevronRight, X, Trash2, Edit, Carrot, Fuel,
+          UtensilsCrossed, Plane, ShoppingBag, Receipt, Sparkles, Home, Save
+      };
+      
+      const IconComponent = ({ name, ...props }) => {
+        const Icon = Icons[name] || Icons.ShoppingBag;
+        return React.createElement(Icon, props);
+      };
+
+      // Component: Header
+      const Header = ({ title, totalBudget, remainingBudget }) => {
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 });
+        const percentageLeft = totalBudget > 0 ? (remainingBudget / totalBudget) * 100 : 0;
+
+        return React.createElement(
+          'header',
+          { className: 'bg-slate-900/80 backdrop-blur-sm p-4 sticky top-0 z-10 border-b border-slate-800' },
+          React.createElement('h1', { className: 'text-lg font-bold text-center mb-3 text-slate-200' }, `${title} ❤️`),
+          React.createElement(
+            'div',
+            { className: 'flex justify-between items-center text-sm' },
+            React.createElement(
+              'div',
+              null,
+              React.createElement('p', { className: 'text-slate-400' }, 'Remaining'),
+              React.createElement('p', { className: 'font-bold text-3xl text-blue-400' }, formatter.format(remainingBudget))
+            ),
+            React.createElement(
+              'div',
+              { className: 'text-right' },
+              React.createElement('p', { className: 'text-slate-400' }, 'Budget'),
+              React.createElement('p', { className: 'font-semibold text-lg' }, formatter.format(totalBudget))
+            )
+          ),
+          React.createElement(
+            'div',
+            { className: 'w-full bg-slate-700 rounded-full h-2 mt-3' },
+            React.createElement('div', {
+              className: 'bg-gradient-to-r from-blue-400 to-indigo-600 h-2 rounded-full transition-all duration-500',
+              style: { width: `${Math.max(0, percentageLeft)}%` },
+            })
+          )
+        );
+      };
+
+      // Component: BottomNav
+      const BottomNav = ({ activeTab, setActiveTab }) => {
+        const NavItem = ({ label, icon, isActive, onClick }) => React.createElement(
+          'button',
+          {
+            onClick,
+            className: `flex flex-col items-center justify-center w-1/4 transition-colors duration-200 ${isActive ? 'text-violet-400' : 'text-slate-500 hover:text-slate-300'}`,
+          },
+          icon,
+          React.createElement('span', { className: 'text-xs font-medium mt-1' }, label)
+        );
+
+        const navItems = [
+          { id: 'calendar', label: 'Calendar', icon: React.createElement(Calendar, { size: 24 }) },
+          { id: 'transactions', label: 'History', icon: React.createElement(List, { size: 24 }) },
+          { id: 'budget', label: 'Budget', icon: React.createElement(Wallet, { size: 24 }) },
+          { id: 'dashboard', label: 'Dashboard', icon: React.createElement(LayoutGrid, { size: 24 }) },
+        ];
+
+        return React.createElement(
+          'nav',
+          { className: 'fixed bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm h-16 flex justify-around items-center z-20 border-t border-slate-700' },
+          navItems.map((item) => React.createElement(NavItem, {
+            key: item.id,
+            label: item.label,
+            icon: item.icon,
+            isActive: activeTab === item.id,
+            onClick: () => setActiveTab(item.id),
+          }))
+        );
+      };
+      
+      // Component: CalendarView
+      const CalendarView = ({ expenses }) => {
+          const [currentDate, setCurrentDate] = useState(new Date());
+
+          const expensesByDate = useMemo(() => {
+            return expenses.reduce((acc, expense) => {
+              const date = expense.date;
+              if (!acc[date]) {
+                acc[date] = 0;
+              }
+              acc[date] += expense.amount;
+              return acc;
+            }, {});
+          }, [expenses]);
+
+          const changeMonth = (amount) => {
+            setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + amount, 1));
+          };
+
+          const renderCalendar = () => {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const days = [];
+
+            for (let i = 0; i < firstDay; i++) {
+              days.push(React.createElement('div', { key: `empty-${i}`, className: 'p-1' }));
+            }
+
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const dailyTotal = expensesByDate[dateStr] || 0;
+              const isToday = isCurrentMonth && today.getDate() === day;
+
+              days.push(
+                React.createElement('div', { key: day, className: `p-1 text-center rounded-lg ${isToday ? 'bg-violet-900/50' : ''} h-20 flex flex-col justify-start` },
+                  React.createElement('span', { className: `text-sm ${isToday ? 'font-bold text-violet-400' : 'text-slate-300'}` }, day),
+                  dailyTotal > 0 && React.createElement('div', { className: 'text-xs bg-pink-500/20 text-pink-300 font-semibold rounded-md mt-1 px-1 py-0.5 truncate' }, `₹${dailyTotal.toLocaleString('en-IN')}`)
+                )
+              );
+            }
+            return days;
+          };
+
+          return React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
+            React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+              React.createElement('button', { onClick: () => changeMonth(-1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronLeft, { size: 20 })),
+              React.createElement('h2', { className: 'text-lg font-semibold text-violet-400' }, currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })),
+              React.createElement('button', { onClick: () => changeMonth(1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronRight, { size: 20 }))
+            ),
+            React.createElement('div', { className: 'grid grid-cols-7 gap-1 text-center text-xs text-slate-400 font-medium mb-2' },
+              ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => React.createElement('div', { key: day }, day))
+            ),
+            React.createElement('div', { className: 'grid grid-cols-7 gap-1' }, renderCalendar())
+          );
+      };
+
+      // Component: TransactionsView
+      const TransactionsView = ({ expenses, categories, onDelete }) => {
+        const sortedExpenses = useMemo(() => {
+          return [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }, [expenses]);
+
+        const getCategory = (id) => {
+          return categories.find(c => c.id === id) || { name: 'Uncategorized', icon: 'ShoppingBag' };
+        };
+
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
+        return React.createElement('div', null,
+          React.createElement('h2', { className: 'text-xl font-bold mb-4 text-slate-200' }, 'Transaction History'),
+          sortedExpenses.length === 0
+            ? React.createElement('p', { className: 'text-center text-slate-400 mt-8' }, "No transactions yet. Tap the '+' button to add one!")
+            : React.createElement('ul', { className: 'space-y-3' },
+              sortedExpenses.map(expense => {
+                const category = getCategory(expense.categoryId);
+                return React.createElement('li', { key: expense.id, className: 'bg-slate-800 p-3 rounded-xl shadow-sm flex items-center justify-between' },
+                  React.createElement('div', { className: 'flex items-center gap-4' },
+                    React.createElement('div', { className: 'w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center' },
+                      React.createElement(IconComponent, { name: category.icon, size: 24, className: 'text-white' })
+                    ),
+                    React.createElement('div', null,
+                      React.createElement('p', { className: 'font-semibold text-slate-100' }, category.name),
+                      React.createElement('p', { className: 'text-xs text-slate-400' }, new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
+                    )
+                  ),
+                  React.createElement('div', { className: 'text-right' },
+                    React.createElement('p', { className: 'font-bold text-red-400' }, `-${formatter.format(expense.amount)}`),
+                    React.createElement('button', { onClick: () => onDelete(expense.id), className: 'text-slate-500 hover:text-red-500 mt-1' },
+                      React.createElement(Trash2, { size: 16 })
+                    )
+                  )
+                );
+              })
+            )
+        );
+      };
+
+      // Component: BudgetView
+      const BudgetView = ({ budget, setBudget, categories, onAddCategory, onDeleteCategory, onUpdateCategory }) => {
+        const availableIcons = Object.keys(Icons).filter(key => /^[A-Z]/.test(key) && !['X', 'Save', 'Edit', 'Trash2', 'ChevronLeft', 'ChevronRight', 'Plus'].includes(key));
+        
+        const CategoryForm = ({ onSubmit, onCancel, category }) => {
+          const [name, setName] = useState(category?.name || '');
+          const [icon, setIcon] = useState(category?.icon || 'ShoppingBag');
+          const [catBudget, setCatBudget] = useState(category?.budget?.toString() || '');
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            if (name.trim()) {
+              onSubmit(name, icon, catBudget ? parseFloat(catBudget) : undefined);
+            }
+          };
+
+          return React.createElement('form', { onSubmit: handleSubmit, className: 'bg-slate-700/50 p-4 rounded-lg mb-4 space-y-4' },
+            React.createElement('div', {className: 'grid grid-cols-2 gap-4'}, 
+                React.createElement('input', { type: 'text', value: name, onChange: (e) => setName(e.target.value), placeholder: 'Category Name', className: 'w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400', required: true }),
+                React.createElement('input', { type: 'number', value: catBudget, onChange: (e) => setCatBudget(e.target.value), placeholder: 'Optional Budget (e.g., 3000)', className: 'w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400' })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { className: 'text-sm text-slate-400' }, 'Icon'),
+              React.createElement('div', { className: 'grid grid-cols-5 sm:grid-cols-8 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-600 rounded-md mt-1' },
+                availableIcons.map(iconName => React.createElement('button', { type: 'button', key: iconName, onClick: () => setIcon(iconName), className: `p-2 rounded-md flex justify-center items-center ${icon === iconName ? 'bg-violet-500/30 ring-2 ring-violet-400' : 'bg-slate-600'}` },
+                  React.createElement(IconComponent, { name: iconName, className: 'text-slate-300', size: 20 })
+                ))
+              )
+            ),
+            React.createElement('div', { className: 'flex justify-end gap-2' },
+              React.createElement('button', { type: 'button', onClick: onCancel, className: 'px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md text-sm font-medium' }, 'Cancel'),
+              React.createElement('button', { type: 'submit', className: 'px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-sm font-medium' }, 'Save')
+            )
+          );
+        };
+
+        const [isEditingBudget, setIsEditingBudget] = useState(false);
+        const [newBudget, setNewBudget] = useState(budget);
+        const [showAddForm, setShowAddForm] = useState(false);
+        const [editingCategory, setEditingCategory] = useState(null);
+
+        const handleBudgetSave = () => { setBudget(newBudget); setIsEditingBudget(false); };
+        const handleAddSubmit = (name, icon, budget) => { onAddCategory({ name, icon, budget }); setShowAddForm(false); };
+        const handleUpdateSubmit = (name, icon, budget) => {
+          if (editingCategory) {
+            onUpdateCategory({ ...editingCategory, name, icon, budget });
+            setEditingCategory(null);
+          }
+        };
+
+        return React.createElement('div', { className: 'space-y-6' },
+          React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
+            React.createElement('h2', { className: 'font-bold text-lg mb-2 text-slate-200' }, 'Total Monthly Budget'),
+            isEditingBudget
+              ? React.createElement('div', { className: 'flex items-center gap-2' },
+                React.createElement('input', { type: 'number', value: newBudget, onChange: (e) => setNewBudget(Number(e.target.value)), className: 'w-full p-2 bg-slate-700 border-slate-600 rounded-lg text-2xl font-bold text-slate-100' }),
+                React.createElement('button', { onClick: handleBudgetSave, className: 'p-2 bg-green-600 text-white rounded-md' }, React.createElement(Save, { size: 20 }))
+              )
+              : React.createElement('div', { className: 'flex items-center justify-between' },
+                React.createElement('p', { className: 'text-3xl font-bold text-violet-400' }, `₹${budget.toLocaleString('en-IN')}`),
+                React.createElement('button', { onClick: () => setIsEditingBudget(true), className: 'p-2 text-slate-400 hover:text-violet-400' }, React.createElement(Edit, { size: 20 }))
+              )
+          ),
+          React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
+            React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+              React.createElement('h2', { className: 'font-bold text-lg' }, 'Categories'),
+              React.createElement('button', { onClick: () => { setShowAddForm(!showAddForm); setEditingCategory(null); }, className: 'px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-sm font-medium' }, showAddForm ? 'Cancel' : 'Add New')
+            ),
+            showAddForm && !editingCategory && React.createElement(CategoryForm, { onSubmit: handleAddSubmit, onCancel: () => setShowAddForm(false) }),
+            editingCategory && React.createElement(CategoryForm, { onSubmit: handleUpdateSubmit, onCancel: () => setEditingCategory(null), category: editingCategory }),
+            React.createElement('ul', { className: 'space-y-2' },
+              categories.map(category => React.createElement('li', { key: category.id, className: 'flex items-center justify-between p-3 bg-slate-700/50 rounded-lg' },
+                React.createElement('div', { className: 'flex items-center gap-3' },
+                  React.createElement(IconComponent, { name: category.icon, size: 20, className: 'text-slate-300' }),
+                  React.createElement('div', null,
+                      React.createElement('span', { className: 'font-medium text-slate-200' }, category.name),
+                      category.budget && React.createElement('p', { className: 'text-xs text-slate-400' }, `Budget: ₹${category.budget.toLocaleString('en-IN')}`)
+                  )
+                ),
+                React.createElement('div', { className: 'flex gap-2' },
+                  React.createElement('button', { onClick: () => { setEditingCategory(category); setShowAddForm(false); }, className: 'text-slate-500 hover:text-blue-400' }, React.createElement(Edit, { size: 18 })),
+                  React.createElement('button', { onClick: () => onDeleteCategory(category.id), className: 'text-slate-500 hover:text-red-400' }, React.createElement(Trash2, { size: 18 }))
+                )
+              ))
+            )
+          )
+        );
+      };
+
+      // Component: DashboardView
+      const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
+        const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
+        
+        const dataByCategory = useMemo(() => {
+          const spending = new Map();
+          categories.forEach(cat => spending.set(cat.id, { name: cat.name, value: 0 }));
+          expenses.forEach(expense => {
+            if (spending.has(expense.categoryId)) {
+              spending.get(expense.categoryId).value += expense.amount;
+            }
+          });
+          return Array.from(spending.values()).filter(d => d.value > 0);
+        }, [expenses, categories]);
+        
+        const spentByCategory = useMemo(() => {
+          const spending = new Map();
+          expenses.forEach(expense => {
+              spending.set(expense.categoryId, (spending.get(expense.categoryId) || 0) + expense.amount);
+          });
+          return spending;
+        }, [expenses]);
+
+        const budgetedCategories = useMemo(() => {
+          return categories.filter(c => c.budget && c.budget > 0);
+        }, [categories]);
+
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 });
+
+        return React.createElement('div', { className: 'space-y-6' },
+          React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+            React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg text-center' },
+                React.createElement('h3', { className: 'text-sm font-medium text-slate-400' }, 'Total Spent'),
+                React.createElement('p', { className: 'text-3xl font-bold text-red-400' }, formatter.format(totalSpent))
+            ),
+            React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg text-center' },
+                React.createElement('h3', { className: 'text-sm font-medium text-slate-400' }, 'Budget Left'),
+                React.createElement('p', { className: 'text-3xl font-bold text-green-400' }, formatter.format(budget - totalSpent))
+            )
+          ),
+          budgetedCategories.length > 0 && React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
+            React.createElement('h2', { className: 'font-bold text-lg mb-4 text-slate-100' }, 'Category Budgets'),
+            React.createElement('div', { className: 'space-y-4' },
+              budgetedCategories.map(category => {
+                const spent = spentByCategory.get(category.id) || 0;
+                const remaining = category.budget - spent;
+                const percentage = Math.min((spent / category.budget) * 100, 100);
+                const isOverBudget = remaining < 0;
+
+                let progressBarColor = 'from-blue-400 to-indigo-600'; // Peacock
+                if (isOverBudget) progressBarColor = 'from-red-500 to-pink-600';
+                else if (percentage > 80) progressBarColor = 'from-amber-500 to-orange-600';
+
+                return React.createElement('div', { key: category.id },
+                  React.createElement('div', { className: 'flex justify-between items-center mb-1' },
+                    React.createElement('div', { className: 'flex items-center gap-2' },
+                        React.createElement(IconComponent, { name: category.icon, size: 20, className: 'text-slate-300' }),
+                        React.createElement('span', { className: 'font-semibold text-slate-200' }, category.name)
+                    ),
+                    React.createElement('span', { className: `font-medium text-sm ${isOverBudget ? 'text-red-400' : 'text-slate-300'}` },
+                      isOverBudget ? `Over by ${formatter.format(Math.abs(remaining))}` : `${formatter.format(remaining)} left`
+                    )
+                  ),
+                   React.createElement('div', { className: 'w-full bg-slate-700 rounded-full h-2' },
+                      React.createElement('div', { 
+                        className: `bg-gradient-to-r ${progressBarColor} h-2 rounded-full`,
+                        style: { width: `${isOverBudget ? 100 : percentage}%` }
+                      })
+                  ),
+                  React.createElement('div', { className: 'text-right text-xs text-slate-400 mt-1' }, `${formatter.format(spent)} / ${formatter.format(category.budget)}`)
+                );
+              })
+            )
+          ),
+          React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
+            React.createElement('h2', { className: 'font-bold text-lg mb-4 text-slate-100' }, 'Spending by Category'),
+            dataByCategory.length > 0
+              ? React.createElement('div', { style: { width: '100%', height: 300 } },
+                React.createElement(ResponsiveContainer, null,
+                  React.createElement(PieChart, null,
+                    React.createElement(Pie, { data: dataByCategory, cx: '50%', cy: '50%', labelLine: false, outerRadius: 80, fill: '#8884d8', dataKey: 'value', nameKey: 'name' },
+                      dataByCategory.map((entry, index) => React.createElement(Cell, { key: `cell-${index}`, fill: COLORS[index % COLORS.length] }))
+                    ),
+                    React.createElement(Tooltip, { formatter: (value) => formatter.format(value), contentStyle: { backgroundColor: 'rgba(30, 41, 59, 0.9)', border: '1px solid #475569', borderRadius: '0.5rem' }, itemStyle: { color: '#cbd5e1' } }),
+                    React.createElement(Legend, { formatter: (value) => React.createElement('span', { className: 'text-slate-300' }, value) })
+                  )
+                )
+              )
+              : React.createElement('p', { className: 'text-center text-slate-400 py-8' }, 'No spending data to show yet.')
+          )
+        );
+      };
+
+      // Component: AddExpenseModal
+      const AddExpenseModal = ({ onClose, onAddExpense, categories }) => {
+        const [amount, setAmount] = useState('');
+        const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+        const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+        const [notes, setNotes] = useState('');
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (!amount || !categoryId || !date) return;
+          onAddExpense({ amount: parseFloat(amount), categoryId, date, notes });
+        };
+
+        return React.createElement('div', { className: 'fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-40 flex justify-center items-center' },
+          React.createElement('div', { className: 'bg-slate-800 rounded-2xl shadow-2xl shadow-violet-900/30 w-full max-w-sm m-4 animate-scale-in' },
+            React.createElement('div', { className: 'flex justify-between items-center p-4 border-b border-slate-700' },
+              React.createElement('h2', { className: 'text-xl font-bold text-slate-100' }, 'Add New Expense'),
+              React.createElement('button', { onClick: onClose, className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(X, { size: 24, className: 'text-slate-400' }))
+            ),
+            React.createElement('form', { onSubmit: handleSubmit, className: 'p-6 space-y-4' },
+              React.createElement('div', null,
+                React.createElement('label', { htmlFor: 'amount', className: 'block text-sm font-medium text-slate-400 mb-1' }, 'Amount'),
+                React.createElement('input', { type: 'number', id: 'amount', value: amount, onChange: (e) => setAmount(e.target.value), className: 'w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-xl text-slate-100', placeholder: '0.00', required: true })
+              ),
+              React.createElement('div', null,
+                React.createElement('label', { className: 'block text-sm font-medium text-slate-400 mb-1' }, 'Category'),
+                React.createElement('div', { className: 'grid grid-cols-4 gap-2' },
+                  categories.map(cat => {
+                    const isActive = categoryId === cat.id;
+                    return React.createElement('button', { type: 'button', key: cat.id, onClick: () => setCategoryId(cat.id), className: `p-2 border rounded-lg flex flex-col items-center gap-1 transition-all ${isActive ? 'bg-violet-900/70 border-violet-500 ring-1 ring-violet-500' : 'bg-slate-700 border-slate-600'}` },
+                      React.createElement(IconComponent, { name: cat.icon, size: 20, className: isActive ? 'text-violet-200' : 'text-slate-300' }),
+                      React.createElement('span', { className: `text-xs truncate ${isActive ? 'text-violet-200' : 'text-slate-300'}` }, cat.name)
+                    );
+                  })
+                )
+              ),
+              React.createElement('div', null,
+                React.createElement('label', { htmlFor: 'date', className: 'block text-sm font-medium text-slate-400 mb-1' }, 'Date'),
+                React.createElement('input', { type: 'date', id: 'date', value: date, onChange: (e) => setDate(e.target.value), className: 'w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-200', required: true, style: { colorScheme: 'dark' } })
+              ),
+              React.createElement('div', null,
+                React.createElement('label', { htmlFor: 'notes', className: 'block text-sm font-medium text-slate-400 mb-1' }, 'Notes (Optional)'),
+                React.createElement('textarea', { id: 'notes', value: notes, onChange: (e) => setNotes(e.target.value), className: 'w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100', rows: 2, placeholder: 'e.g., weekly vegetables' })
+              ),
+              React.createElement('button', { type: 'submit', className: 'w-full bg-violet-600 text-white font-bold py-3 rounded-lg hover:bg-violet-700 transition-transform active:scale-95' }, 'Add Expense')
+            )
+          ),
+          React.createElement('style', null, `
+            @keyframes scale-in {
+              from { transform: scale(0.9); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+            .animate-scale-in {
+              animation: scale-in 0.2s ease-out forwards;
+            }
+          `)
+        );
+      };
+
+      // Main App Component
+      function App() {
+        const DEFAULT_CATEGORIES = [
+          { id: '1', name: 'Grocery', icon: 'Carrot' },
+          { id: '2', name: 'Petrol', icon: 'Fuel' },
+          { id: '3', name: 'Dinner', icon: 'UtensilsCrossed' },
+          { id: '4', name: 'Travel', icon: 'Plane' },
+          { id: '5', name: 'Shopping', icon: 'ShoppingBag' },
+          { id: '6', name: 'Bills', icon: 'Receipt' },
+          { id: '7', name: 'Maid/Services', icon: 'Sparkles' },
+        ];
+
+        const [activeTab, setActiveTab] = useState('calendar');
+        const [budget, setBudget] = useLocalStorage('monthlyBudget', 15000);
+        const [categories, setCategories] = useLocalStorage('expenseCategories', DEFAULT_CATEGORIES);
+        const [expenses, setExpenses] = useLocalStorage('userExpenses', []);
+        const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+
+        const totalSpent = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
+        const remainingBudget = useMemo(() => budget - totalSpent, [budget, totalSpent]);
+
+        const handleAddExpense = useCallback((expense) => {
+          setExpenses(prev => [...prev, { ...expense, id: Date.now().toString() }]);
+          setIsAddExpenseModalOpen(false);
+        }, [setExpenses]);
+
+        const handleDeleteExpense = useCallback((id) => setExpenses(prev => prev.filter(exp => exp.id !== id)), [setExpenses]);
+        const handleAddCategory = useCallback((category) => setCategories(prev => [...prev, { ...category, id: Date.now().toString() }]), [setCategories]);
+        
+        const handleDeleteCategory = useCallback((id) => {
+          setCategories(prev => prev.filter(cat => cat.id !== id));
+          setExpenses(prev => prev.filter(exp => exp.categoryId !== id));
+        }, [setCategories, setExpenses]);
+        
+        const handleUpdateCategory = useCallback((updatedCategory) => {
+          setCategories(prev => prev.map(cat => cat.id === updatedCategory.id ? updatedCategory : cat));
+        }, [setCategories]);
+
+        const renderContent = () => {
+          switch (activeTab) {
+            case 'calendar': return React.createElement(CalendarView, { expenses, categories });
+            case 'transactions': return React.createElement(TransactionsView, { expenses, categories, onDelete: handleDeleteExpense });
+            case 'budget': return React.createElement(BudgetView, { budget, setBudget, categories, onAddCategory: handleAddCategory, onDeleteCategory: handleDeleteCategory, onUpdateCategory: handleUpdateCategory });
+            case 'dashboard': return React.createElement(DashboardView, { expenses, categories, budget, totalSpent });
+            default: return React.createElement(CalendarView, { expenses, categories });
+          }
+        };
+
+        return React.createElement(
+          'div',
+          { className: 'min-h-screen bg-slate-900 text-slate-200 flex flex-col' },
+          React.createElement(Header, { title: 'Monthly Expense Tracker', totalBudget: budget, remainingBudget: remainingBudget }),
+          React.createElement('main', { className: 'flex-grow pb-24 px-4 pt-4' }, renderContent()),
+          React.createElement(
+            'button',
+            {
+              onClick: () => setIsAddExpenseModalOpen(true),
+              className: 'fixed bottom-20 right-5 bg-gradient-to-br from-pink-500 to-violet-600 text-white rounded-full p-4 shadow-lg shadow-violet-500/30 z-20 transition-transform transform hover:scale-110 active:scale-95',
+              'aria-label': 'Add Expense',
+            },
+            React.createElement(Plus, { size: 28 })
+          ),
+          React.createElement(BottomNav, { activeTab, setActiveTab }),
+          isAddExpenseModalOpen && React.createElement(AddExpenseModal, {
+            onClose: () => setIsAddExpenseModalOpen(false),
+            onAddExpense: handleAddExpense,
+            categories,
+          })
+        );
+      }
+
+      // Root Rendering
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(React.createElement(React.StrictMode, null, React.createElement(App)));
+
+      // --- END: Consolidated App Code ---
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
