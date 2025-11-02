@@ -104,7 +104,7 @@
             'div',
             { className: 'w-full bg-slate-700 rounded-full h-2 mt-3' },
             React.createElement('div', {
-              className: 'bg-gradient-to-r from-blue-400 to-indigo-600 h-2 rounded-full transition-all duration-500',
+              className: 'bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-500',
               style: { width: `${Math.max(0, percentageLeft)}%` },
             })
           )
@@ -117,7 +117,7 @@
           'button',
           {
             onClick,
-            className: `flex flex-col items-center justify-center w-1/4 transition-colors duration-200 ${isActive ? 'text-violet-400' : 'text-slate-500 hover:text-slate-300'}`,
+            className: `flex flex-col items-center justify-center w-1/4 transition-colors duration-200 ${isActive ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`,
           },
           icon,
           React.createElement('span', { className: 'text-xs font-medium mt-1' }, label)
@@ -182,8 +182,8 @@
               const isToday = isCurrentMonth && today.getDate() === day;
 
               days.push(
-                React.createElement('div', { key: day, className: `p-1 text-center rounded-lg ${isToday ? 'bg-violet-900/50' : ''} h-20 flex flex-col justify-start` },
-                  React.createElement('span', { className: `text-sm ${isToday ? 'font-bold text-violet-400' : 'text-slate-300'}` }, day),
+                React.createElement('div', { key: day, className: `p-1 text-center rounded-lg ${isToday ? 'bg-blue-900/50' : ''} h-20 flex flex-col justify-start` },
+                  React.createElement('span', { className: `text-sm ${isToday ? 'font-bold text-blue-400' : 'text-slate-300'}` }, day),
                   dailyTotal > 0 && React.createElement('div', { className: 'text-[11px] leading-tight bg-pink-500/20 text-pink-300 font-semibold rounded-md mt-1 px-1 py-0.5' }, `₹${dailyTotal.toLocaleString('en-IN')}`)
                 )
               );
@@ -194,7 +194,7 @@
           return React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
             React.createElement('div', { className: 'flex justify-between items-center mb-4' },
               React.createElement('button', { onClick: () => changeMonth(-1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronLeft, { size: 20 })),
-              React.createElement('h2', { className: 'text-lg font-semibold text-violet-400' }, currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })),
+              React.createElement('h2', { className: 'text-lg font-semibold text-blue-400' }, currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })),
               React.createElement('button', { onClick: () => changeMonth(1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronRight, { size: 20 }))
             ),
             React.createElement('div', { className: 'grid grid-cols-7 gap-1 text-center text-xs text-slate-400 font-medium mb-2' },
@@ -230,7 +230,8 @@
                     ),
                     React.createElement('div', null,
                       React.createElement('p', { className: 'font-semibold text-slate-100' }, category.name),
-                      React.createElement('p', { className: 'text-xs text-slate-400' }, new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
+                      React.createElement('p', { className: 'text-xs text-slate-400' }, new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })),
+                      expense.notes && React.createElement('p', { className: 'text-xs text-slate-500 italic mt-1' }, expense.notes)
                     )
                   ),
                   React.createElement('div', { className: 'text-right' },
@@ -269,14 +270,14 @@
             React.createElement('div', null,
               React.createElement('label', { className: 'text-sm text-slate-400' }, 'Icon'),
               React.createElement('div', { className: 'grid grid-cols-5 sm:grid-cols-8 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-600 rounded-md mt-1' },
-                availableIcons.map(iconName => React.createElement('button', { type: 'button', key: iconName, onClick: () => setIcon(iconName), className: `p-2 rounded-md flex justify-center items-center ${icon === iconName ? 'bg-violet-500/30 ring-2 ring-violet-400' : 'bg-slate-600'}` },
+                availableIcons.map(iconName => React.createElement('button', { type: 'button', key: iconName, onClick: () => setIcon(iconName), className: `p-2 rounded-md flex justify-center items-center ${icon === iconName ? 'bg-blue-500/30 ring-2 ring-blue-400' : 'bg-slate-600'}` },
                   React.createElement(IconComponent, { name: iconName, className: 'text-slate-300', size: 20 })
                 ))
               )
             ),
             React.createElement('div', { className: 'flex justify-end gap-2' },
               React.createElement('button', { type: 'button', onClick: onCancel, className: 'px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md text-sm font-medium' }, 'Cancel'),
-              React.createElement('button', { type: 'submit', className: 'px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-sm font-medium' }, 'Save')
+              React.createElement('button', { type: 'submit', className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium' }, 'Save')
             )
           );
         };
@@ -304,14 +305,14 @@
                 React.createElement('button', { onClick: handleBudgetSave, className: 'p-2 bg-green-600 text-white rounded-md' }, React.createElement(Save, { size: 20 }))
               )
               : React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('p', { className: 'text-3xl font-bold text-violet-400' }, `₹${budget.toLocaleString('en-IN')}`),
-                React.createElement('button', { onClick: () => setIsEditingBudget(true), className: 'p-2 text-slate-400 hover:text-violet-400' }, React.createElement(Edit, { size: 20 }))
+                React.createElement('p', { className: 'text-3xl font-bold text-blue-400' }, `₹${budget.toLocaleString('en-IN')}`),
+                React.createElement('button', { onClick: () => setIsEditingBudget(true), className: 'p-2 text-slate-400 hover:text-blue-400' }, React.createElement(Edit, { size: 20 }))
               )
           ),
           React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
             React.createElement('div', { className: 'flex justify-between items-center mb-4' },
               React.createElement('h2', { className: 'font-bold text-lg' }, 'Categories'),
-              React.createElement('button', { onClick: () => { setShowAddForm(!showAddForm); setEditingCategory(null); }, className: 'px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-sm font-medium' }, showAddForm ? 'Cancel' : 'Add New')
+              React.createElement('button', { onClick: () => { setShowAddForm(!showAddForm); setEditingCategory(null); }, className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium' }, showAddForm ? 'Cancel' : 'Add New')
             ),
             showAddForm && !editingCategory && React.createElement(CategoryForm, { onSubmit: handleAddSubmit, onCancel: () => setShowAddForm(false) }),
             editingCategory && React.createElement(CategoryForm, { onSubmit: handleUpdateSubmit, onCancel: () => setEditingCategory(null), category: editingCategory }),
@@ -336,7 +337,7 @@
 
       // Component: DashboardView
       const DashboardView = ({ expenses, categories, budget, totalSpent }) => {
-        const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
+        const COLORS = ['#3b82f6', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
         
         const dataByCategory = useMemo(() => {
           const spending = new Map();
@@ -383,7 +384,7 @@
                 const percentage = Math.min((spent / category.budget) * 100, 100);
                 const isOverBudget = remaining < 0;
 
-                let progressBarColor = 'from-blue-400 to-indigo-600'; // Peacock
+                let progressBarColor = 'from-blue-400 to-blue-600'; 
                 if (isOverBudget) progressBarColor = 'from-red-500 to-pink-600';
                 else if (percentage > 80) progressBarColor = 'from-amber-500 to-orange-600';
 
@@ -441,7 +442,7 @@
         };
 
         return React.createElement('div', { className: 'fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-40 flex justify-center items-center' },
-          React.createElement('div', { className: 'bg-slate-800 rounded-2xl shadow-2xl shadow-violet-900/30 w-full max-w-sm m-4 animate-scale-in' },
+          React.createElement('div', { className: 'bg-slate-800 rounded-2xl shadow-2xl shadow-blue-900/30 w-full max-w-sm m-4 animate-scale-in' },
             React.createElement('div', { className: 'flex justify-between items-center p-4 border-b border-slate-700' },
               React.createElement('h2', { className: 'text-xl font-bold text-slate-100' }, 'Add New Expense'),
               React.createElement('button', { onClick: onClose, className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(X, { size: 24, className: 'text-slate-400' }))
@@ -456,9 +457,9 @@
                 React.createElement('div', { className: 'grid grid-cols-4 gap-2' },
                   categories.map(cat => {
                     const isActive = categoryId === cat.id;
-                    return React.createElement('button', { type: 'button', key: cat.id, onClick: () => setCategoryId(cat.id), className: `p-2 border rounded-lg flex flex-col items-center gap-1 transition-all ${isActive ? 'bg-violet-900/70 border-violet-500 ring-1 ring-violet-500' : 'bg-slate-700 border-slate-600'}` },
-                      React.createElement(IconComponent, { name: cat.icon, size: 20, className: isActive ? 'text-violet-200' : 'text-slate-300' }),
-                      React.createElement('span', { className: `text-xs truncate ${isActive ? 'text-violet-200' : 'text-slate-300'}` }, cat.name)
+                    return React.createElement('button', { type: 'button', key: cat.id, onClick: () => setCategoryId(cat.id), className: `p-2 border rounded-lg flex flex-col items-center gap-1 transition-all ${isActive ? 'bg-blue-900/70 border-blue-500 ring-1 ring-blue-500' : 'bg-slate-700 border-slate-600'}` },
+                      React.createElement(IconComponent, { name: cat.icon, size: 20, className: isActive ? 'text-blue-200' : 'text-slate-300' }),
+                      React.createElement('span', { className: `text-xs truncate ${isActive ? 'text-blue-200' : 'text-slate-300'}` }, cat.name)
                     );
                   })
                 )
@@ -471,7 +472,7 @@
                 React.createElement('label', { htmlFor: 'notes', className: 'block text-sm font-medium text-slate-400 mb-1' }, 'Notes (Optional)'),
                 React.createElement('textarea', { id: 'notes', value: notes, onChange: (e) => setNotes(e.target.value), className: 'w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100', rows: 2, placeholder: 'e.g., weekly vegetables' })
               ),
-              React.createElement('button', { type: 'submit', className: 'w-full bg-violet-600 text-white font-bold py-3 rounded-lg hover:bg-violet-700 transition-transform active:scale-95' }, 'Add Expense')
+              React.createElement('button', { type: 'submit', className: 'w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-transform active:scale-95' }, 'Add Expense')
             )
           ),
           React.createElement('style', null, `
@@ -543,7 +544,7 @@
             'button',
             {
               onClick: () => setIsAddExpenseModalOpen(true),
-              className: 'fixed bottom-20 right-5 bg-gradient-to-br from-pink-500 to-violet-600 text-white rounded-full p-4 shadow-lg shadow-violet-500/30 z-20 transition-transform transform hover:scale-110 active:scale-95',
+              className: 'fixed bottom-20 right-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full p-4 shadow-lg shadow-blue-500/30 z-20 transition-transform transform hover:scale-110 active:scale-95',
               'aria-label': 'Add Expense',
             },
             React.createElement(Plus, { size: 28 })
