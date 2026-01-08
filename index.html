@@ -75,16 +75,21 @@
       }
 
       // --- Component: Header ---
-      const Header = ({ title, totalBudget, remainingBudget }) => {
+      const Header = ({ title, totalBudget, remainingBudget, viewDate }) => {
         const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 });
         const percentageLeft = totalBudget > 0 ? (remainingBudget / totalBudget) * 100 : 0;
+        const monthYear = viewDate.toLocaleString('default', { month: 'short', year: 'numeric' });
 
         return React.createElement(
           'header',
           { 
             className: 'bg-slate-900/95 backdrop-blur-md px-4 pt-8 pb-4 sticky top-0 z-30 border-b border-slate-800 shadow-md' 
           },
-          React.createElement('h1', { className: 'text-lg font-bold text-center mb-3 text-slate-100' }, title),
+          React.createElement('div', { className: 'flex justify-between items-center mb-3' },
+            React.createElement('div', { className: 'w-10' }), // spacer
+            React.createElement('h1', { className: 'text-lg font-bold text-center text-slate-100' }, title),
+            React.createElement('span', { className: 'text-[10px] bg-slate-800 px-2 py-1 rounded-full text-slate-400 font-bold' }, monthYear)
+          ),
           React.createElement(
             'div',
             { className: 'flex justify-between items-center text-sm' },
@@ -108,7 +113,7 @@
               className: 'h-2 rounded-full transition-all duration-500',
               style: { 
                 width: `${Math.max(0, Math.min(100, percentageLeft))}%`,
-                background: 'linear-gradient(to right, #00A3D9, #00C2E2, #0CB9F3, #95D426)'
+                background: 'linear-gradient(to right, #00A3D9, #00C2E2, #0CB9F3, #06B029)'
               },
             })
           )
@@ -148,9 +153,7 @@
       };
       
       // --- Component: CalendarView ---
-      const CalendarView = ({ expenses, onDateClick }) => {
-          const [currentDate, setCurrentDate] = useState(new Date());
-
+      const CalendarView = ({ expenses, onDateClick, viewDate, setViewDate }) => {
           const expensesByDate = useMemo(() => {
             return expenses.reduce((acc, expense) => {
               const date = expense.date;
@@ -160,12 +163,12 @@
           }, [expenses]);
 
           const changeMonth = (amount) => {
-            setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + amount, 1));
+            setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + amount, 1));
           };
 
           const renderCalendar = () => {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const days = [];
@@ -199,7 +202,7 @@
           return React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
             React.createElement('div', { className: 'flex justify-between items-center mb-4' },
               React.createElement('button', { onClick: () => changeMonth(-1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronLeft, { size: 20 })),
-              React.createElement('h2', { className: 'text-lg font-semibold text-blue-400' }, currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })),
+              React.createElement('h2', { className: 'text-lg font-semibold text-blue-400' }, viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })),
               React.createElement('button', { onClick: () => changeMonth(1), className: 'p-2 rounded-full hover:bg-slate-700' }, React.createElement(ChevronRight, { size: 20 }))
             ),
             React.createElement('div', { className: 'grid grid-cols-7 gap-1 text-center text-xs text-slate-400 font-medium mb-2' },
@@ -211,10 +214,15 @@
       };
 
       // --- Component: TransactionsView ---
-      const TransactionsView = ({ expenses, categories, onDelete }) => {
+      const TransactionsView = ({ expenses, categories, onDelete, viewDate }) => {
         const sortedExpenses = useMemo(() => {
-          return [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }, [expenses]);
+          return expenses
+            .filter(e => {
+                const d = new Date(e.date);
+                return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear();
+            })
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }, [expenses, viewDate]);
 
         const getCategory = (id) => categories.find(c => c.id === id) || { name: 'Uncategorized', icon: 'ShoppingBag' };
         const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -222,7 +230,7 @@
         return React.createElement('div', null,
           React.createElement('h2', { className: 'text-xl font-bold mb-4 text-slate-200' }, 'History'),
           sortedExpenses.length === 0
-            ? React.createElement('p', { className: 'text-center text-slate-400 mt-8' }, "No transactions yet.")
+            ? React.createElement('p', { className: 'text-center text-slate-400 mt-8' }, "No transactions for this month.")
             : React.createElement('ul', { className: 'space-y-3' },
               sortedExpenses.map(expense => {
                 const category = getCategory(expense.categoryId);
@@ -250,7 +258,7 @@
       };
 
       // --- Component: BudgetView ---
-      const BudgetView = ({ budget, setBudget, categories, onAddCategory, onDeleteCategory, onUpdateCategory }) => {
+      const BudgetView = ({ budget, setBudget, categories, onAddCategory, onDeleteCategory, onUpdateCategory, viewDate }) => {
         const [isEditingBudget, setIsEditingBudget] = useState(false);
         const [newBudget, setNewBudget] = useState(budget);
         const [showAddForm, setShowAddForm] = useState(false);
@@ -278,9 +286,14 @@
           resetForm();
         };
 
+        const currentMonthName = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
         return React.createElement('div', { className: 'space-y-6' },
           React.createElement('div', { className: 'bg-slate-800 p-4 rounded-2xl shadow-lg' },
-            React.createElement('h2', { className: 'font-bold text-lg mb-2 text-slate-200' }, 'Total Monthly Budget'),
+            React.createElement('div', { className: 'flex justify-between items-center mb-2' },
+                React.createElement('h2', { className: 'font-bold text-lg text-slate-200' }, 'Monthly Budget'),
+                React.createElement('span', { className: 'text-xs text-slate-500' }, currentMonthName)
+            ),
             isEditingBudget
               ? React.createElement('div', { className: 'flex items-center gap-2' },
                 React.createElement('input', { type: 'number', value: newBudget, onChange: (e) => setNewBudget(Number(e.target.value)), className: 'w-full p-2 bg-slate-700 border-slate-600 rounded-lg text-2xl font-bold text-slate-100' }),
@@ -322,24 +335,19 @@
         );
       };
 
-      // --- Component: DashboardView (WITH MONTH SELECTOR) ---
-      const DashboardView = ({ expenses, categories, budget }) => {
-        const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-        const [viewYear, setViewYear] = useState(new Date().getFullYear());
-
-        const monthName = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+      // --- Component: DashboardView ---
+      const DashboardView = ({ expenses, categories, budget, viewDate, setViewDate }) => {
+        const monthName = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
         const filteredExpenses = useMemo(() => {
           return expenses.filter(e => {
             const d = new Date(e.date);
-            return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
+            return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear();
           });
-        }, [expenses, viewMonth, viewYear]);
+        }, [expenses, viewDate]);
 
         const changeMonth = (delta) => {
-          const newDate = new Date(viewYear, viewMonth + delta, 1);
-          setViewMonth(newDate.getMonth());
-          setViewYear(newDate.getFullYear());
+          setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1));
         };
 
         const monthlySpent = useMemo(() => filteredExpenses.reduce((sum, e) => sum + e.amount, 0), [filteredExpenses]);
@@ -462,14 +470,29 @@
         ];
 
         const [activeTab, setActiveTab] = useState('calendar');
-        const [budget, setBudget] = useLocalStorage('monthlyBudget', 15000);
+        const [viewDate, setViewDate] = useState(new Date());
+        
+        // Multi-month budget storage
+        const [monthlyBudgets, setMonthlyBudgets] = useLocalStorage('monthlyBudgets', {});
+        const [defaultBudget, setDefaultBudget] = useLocalStorage('defaultBudget', 15000);
+        
+        const monthKey = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`;
+        const currentBudget = monthlyBudgets[monthKey] !== undefined ? monthlyBudgets[monthKey] : defaultBudget;
+
         const [categories, setCategories] = useLocalStorage('expenseCategories', DEFAULT_CATEGORIES);
         const [expenses, setExpenses] = useLocalStorage('userExpenses', []);
         const [isAddModalOpen, setIsAddModalOpen] = useState(false);
         const [prefilledDate, setPrefilledDate] = useState(null);
 
-        const totalSpent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
-        const remaining = budget - totalSpent;
+        const currentMonthExpenses = useMemo(() => {
+          return expenses.filter(e => {
+            const d = new Date(e.date);
+            return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear();
+          });
+        }, [expenses, viewDate]);
+
+        const totalSpent = useMemo(() => currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0), [currentMonthExpenses]);
+        const remaining = currentBudget - totalSpent;
 
         const handleDateClick = (date) => {
           setPrefilledDate(date);
@@ -482,15 +505,24 @@
           setPrefilledDate(null);
         };
 
+        const handleSetBudget = (newVal) => {
+           setMonthlyBudgets(prev => ({
+             ...prev,
+             [monthKey]: newVal
+           }));
+           // Also update default if this is the first time
+           if (Object.keys(monthlyBudgets).length === 0) setDefaultBudget(newVal);
+        };
+
         return React.createElement(
           'div',
           { className: 'min-h-screen bg-slate-900 text-slate-200 flex flex-col' },
-          React.createElement(Header, { title: 'Expense tracker', totalBudget: budget, remainingBudget: remaining }),
+          React.createElement(Header, { title: 'Expense tracker', totalBudget: currentBudget, remainingBudget: remaining, viewDate: viewDate }),
           React.createElement('main', { className: 'flex-grow pb-24 px-4 pt-4' },
-            activeTab === 'calendar' && React.createElement(CalendarView, { expenses, onDateClick: handleDateClick }),
-            activeTab === 'transactions' && React.createElement(TransactionsView, { expenses, categories, onDelete: id => setExpenses(prev => prev.filter(e => e.id !== id)) }),
-            activeTab === 'budget' && React.createElement(BudgetView, { budget, setBudget, categories, onAddCategory: c => setCategories(p => [...p, { ...c, id: Date.now().toString() }]), onDeleteCategory: id => setCategories(p => p.filter(x => x.id !== id)), onUpdateCategory: c => setCategories(p => p.map(x => x.id === c.id ? c : x)) }),
-            activeTab === 'dashboard' && React.createElement(DashboardView, { expenses, categories, budget })
+            activeTab === 'calendar' && React.createElement(CalendarView, { expenses, onDateClick: handleDateClick, viewDate, setViewDate }),
+            activeTab === 'transactions' && React.createElement(TransactionsView, { expenses, categories, onDelete: id => setExpenses(prev => prev.filter(e => e.id !== id)), viewDate }),
+            activeTab === 'budget' && React.createElement(BudgetView, { budget: currentBudget, setBudget: handleSetBudget, categories, onAddCategory: c => setCategories(p => [...p, { ...c, id: Date.now().toString() }]), onDeleteCategory: id => setCategories(p => p.filter(x => x.id !== id)), onUpdateCategory: c => setCategories(p => p.map(x => x.id === c.id ? c : x)), viewDate }),
+            activeTab === 'dashboard' && React.createElement(DashboardView, { expenses, categories, budget: currentBudget, viewDate, setViewDate })
           ),
           React.createElement('button', {
             onClick: () => { setPrefilledDate(new Date().toISOString().split('T')[0]); setIsAddModalOpen(true); },
